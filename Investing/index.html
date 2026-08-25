@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wealth & Debt Strategy Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Top Cash Flow Optimization Header -->
+    <div class="card full-width">
+        <h2>Capital & Income Allocation</h2>
+        <div class="cashflow-banner">
+            
+            <!-- Row 1: Total Income Definition -->
+            <div class="control-row">
+                <div class="metric-group">
+                    <span class="metric-label">Total Monthly Income</span>
+                    <input type="number" id="income-input" class="metric-input" value="5000" min="0" step="100">
+                </div>
+                <div class="slider-control" style="width: 70%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+                        <span>Adjust Base Income</span>
+                        <span id="income-slider-label">$5,000</span>
+                    </div>
+                    <input type="range" id="income-slider" min="1000" max="25000" step="100" value="5000">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Row 2: Strategy Allocation Definition -->
+            <div class="control-row">
+                <div class="metric-group">
+                    <span class="metric-label">Strategy Allocation Pool</span>
+                    <span class="metric-value" id="allocation-display" style="color: var(--accent-blue);">$2,800 / mo</span>
+                </div>
+                <div class="slider-control" style="width: 45%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+                        <span>Allocate to Debt & Wealth</span>
+                        <span id="allocation-slider-label">$2,800</span>
+                    </div>
+                    <input type="range" id="allocation-slider" min="0" max="5000" step="10" value="2800">
+                </div>
+                <div class="metric-group" style="text-align: right;">
+                    <span class="metric-label">Auto-Routed Excess</span>
+                    <span class="metric-value" id="routed-display" style="color: var(--accent-green);">$0 / mo</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- Environment & Macro Settings -->
+    <div class="card full-width">
+        <h2>Macro Environment Settings</h2>
+        <div class="cashflow-banner" style="flex-direction: row; gap: 40px; background: transparent; border: none; padding: 0;">
+            <div class="control-row" style="flex: 1;">
+                <div class="metric-group">
+                    <span class="metric-label" title="Only pay extra on debts with APR higher than this threshold.">Debt vs. Invest Threshold</span>
+                    <div style="display: flex; align-items: baseline; gap: 4px;">
+                        <input type="number" id="threshold-input" class="metric-input" value="7.0" step="0.1" style="width: 60px;">
+                        <span style="color: var(--text-primary); font-weight: 700; font-size: 20px;">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-row" style="flex: 1;">
+                <div class="metric-group">
+                    <span class="metric-label" title="Discounts net worth over time to show real purchasing power.">Expected Inflation</span>
+                    <div style="display: flex; align-items: baseline; gap: 4px;">
+                        <input type="number" id="inflation-input" class="metric-input" value="3.0" step="0.1" style="width: 60px;">
+                        <span style="color: var(--text-primary); font-weight: 700; font-size: 20px;">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-row" style="flex: 1;">
+                <div class="metric-group">
+                    <span class="metric-label" title="Reduces Nominal ROI by this tax rate.">Estimated Tax Rate (Gains)</span>
+                    <div style="display: flex; align-items: baseline; gap: 4px;">
+                        <input type="number" id="tax-input" class="metric-input" value="15.0" step="0.1" style="width: 60px;">
+                        <span style="color: var(--text-primary); font-weight: 700; font-size: 20px;">%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debt Obligations Grid -->
+    <div class="card">
+        <h3>Liabilities & Debt (Avalanche Order)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 32%;">Account</th>
+                    <th style="width: 24%;">Balance ($)</th>
+                    <th style="width: 18%;">APR (%)</th>
+                    <th style="width: 20%;">Min. Pay ($)</th>
+                    <th style="width: 6%;"></th>
+                </tr>
+            </thead>
+            <tbody id="debt-table-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+        <button class="btn-add" onclick="addDebtRow('', 0, 0, 0)">+ Add Liability</button>
+    </div>
+
+    <!-- Investment & Retirement Accounts Grid -->
+    <div class="card">
+        <h3>Assets & Investments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 32%;">Vehicle</th>
+                    <th style="width: 24%;">Balance ($)</th>
+                    <th style="width: 18%;">Exp. ROI (%)</th>
+                    <th style="width: 20%;">Monthly ($)</th>
+                    <th style="width: 6%;"></th>
+                </tr>
+            </thead>
+            <tbody id="invest-table-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+        <button class="btn-add" onclick="addInvestRow('', 0, 7.0, 0)">+ Add Investment Vehicle</button>
+    </div>
+
+    <!-- Current Month Allocation Directive -->
+    <div class="card full-width">
+        <h3>Month 1: Execution Strategy</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Target Account</th>
+                    <th style="width: 45%;">Strategic Action</th>
+                    <th style="width: 20%; text-align: right;">Amount ($)</th>
+                </tr>
+            </thead>
+            <tbody id="action-plan-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Strategy Simulation Chart -->
+    <div class="card full-width">
+        <h3>5-Year Net Worth Trajectory</h3>
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div class="metric-group" style="width: auto;">
+                <span class="metric-label">Debt vs Invest Threshold</span>
+                <span class="metric-value" style="font-size: 16px;" id="threshold-display">7.0%</span>
+            </div>
+            <div class="metric-group" style="width: auto;">
+                <span class="metric-label">Inflation Discount</span>
+                <span class="metric-value" style="font-size: 16px;" id="inflation-display">3.0%</span>
+            </div>
+            <div class="metric-group" style="width: auto;">
+                <span class="metric-label">Tax Drag</span>
+                <span class="metric-value" style="font-size: 16px;" id="tax-display">15.0%</span>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="projectionChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

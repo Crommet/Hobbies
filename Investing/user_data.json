@@ -1,0 +1,49 @@
+{
+    "debts": [
+        {
+            "name": "Credit Card",
+            "balance": 4500,
+            "apr": 24.2,
+            "minPay": 140
+        },
+        {
+            "name": "Auto Loan",
+            "balance": 14000,
+            "apr": 6.2,
+            "minPay": 310
+        },
+        {
+            "name": "Student Loan",
+            "balance": 22000,
+            "apr": 4.8,
+            "minPay": 240
+        }
+    ],
+    "investments": [
+        {
+            "name": "401(k) Match Target",
+            "balance": 12000,
+            "roi": 8,
+            "monthly": 500
+        },
+        {
+            "name": "Roth IRA",
+            "balance": 8500,
+            "roi": 8,
+            "monthly": 583
+        },
+        {
+            "name": "Taxable Brokerage",
+            "balance": 15000,
+            "roi": 7.5,
+            "monthly": 300
+        }
+    ],
+    "settings": {
+        "income": 2900,
+        "allocation": 690,
+        "threshold": 7,
+        "inflation": 3,
+        "taxRate": 15
+    }
+}
