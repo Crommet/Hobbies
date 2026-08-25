@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wealth & Debt Strategy Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #121417;
+            --bg-card: #1b1e23;
+            --border-color: #2b303a;
+            --text-primary: #e6e8eb;
+            --text-muted: #8b949e;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        h2, h3 {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .cashflow-banner {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: #161b22;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .divider {
+            border-top: 1px solid var(--border-color);
+            width: 100%;
+            margin: 0;
+        }
+
+        .metric-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 25%;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Custom transparent input for dashboard metrics */
+        .metric-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--border-color);
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 700;
+            width: 100px;
+            outline: none;
+            padding: 2px 0;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        .metric-input:focus {
+            border-bottom-color: var(--accent-blue);
+        }
+        
+        /* Hide HTML number arrows for cleanliness */
+        .metric-input::-webkit-outer-spin-button,
+        .metric-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        input[type="range"] {
+            accent-color: var(--accent-blue);
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 8px 4px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        input[type="text"], table input[type="number"], select {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .btn-add {
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--accent-blue);
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: background 0.15s ease;
+        }
+
+        .btn-add:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-del {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+        }
+
+        .btn-del:hover {
+            color: var(--accent-red);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 340px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Top Cash Flow Optimization Header -->
+    <div class="card full-width">
+        <h2>Capital & Income Allocation</h2>
+        <div class="cashflow-banner">
+            
+            <!-- Row 1: Total Income Definition -->
+            <div class="control-row">
+                <div class="metric-group">
+                    <span class="metric-label">Total Monthly Income ($)</span>
+                    <input type="number" id="income-input" class="metric-input" value="5000" min="0" step="100">
+                </div>
+                <div class="slider-control" style="width: 70%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+                        <span>Adjust Base Income</span>
+                        <span id="income-slider-label">$5,000</span>
+                    </div>
+                    <input type="range" id="income-slider" min="1000" max="25000" step="100" value="5000">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Row 2: Strategy Allocation Definition -->
+            <div class="control-row">
+                <div class="metric-group">
+                    <span class="metric-label">Strategy Allocation Pool</span>
+                    <span class="metric-value" id="allocation-display" style="color: var(--accent-blue);">$2,800 / mo</span>
+                </div>
+                <div class="slider-control" style="width: 45%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+                        <span>Allocate to Debt & Wealth</span>
+                        <span id="allocation-slider-label">$2,800</span>
+                    </div>
+                    <input type="range" id="allocation-slider" min="0" max="5000" step="10" value="2800">
+                </div>
+                <div class="metric-group" style="text-align: right;">
+                    <span class="metric-label">Auto-Routed Excess</span>
+                    <span class="metric-value" id="routed-display" style="color: var(--accent-green);">$0 / mo</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Debt Obligations Grid -->
+    <div class="card">
+        <h3>Liabilities & Debt (Avalanche Order)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 32%;">Account</th>
+                    <th style="width: 24%;">Balance ($)</th>
+                    <th style="width: 18%;">APR (%)</th>
+                    <th style="width: 20%;">Min. Pay ($)</th>
+                    <th style="width: 6%;"></th>
+                </tr>
+            </thead>
+            <tbody id="debt-table-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+        <button class="btn-add" onclick="addDebtRow('Personal Loan', 3000, 10.5, 90)">+ Add Liability</button>
+    </div>
+
+    <!-- Investment & Retirement Accounts Grid -->
+    <div class="card">
+        <h3>Assets & Investments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 32%;">Vehicle</th>
+                    <th style="width: 24%;">Balance ($)</th>
+                    <th style="width: 18%;">Exp. ROI (%)</th>
+                    <th style="width: 20%;">Monthly ($)</th>
+                    <th style="width: 6%;"></th>
+                </tr>
+            </thead>
+            <tbody id="invest-table-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+        <button class="btn-add" onclick="addInvestRow('HSA', 2000, 7.5, 200)">+ Add Investment Vehicle</button>
+    </div>
+
+    <!-- Current Month Allocation Directive -->
+    <div class="card full-width">
+        <h3>Month 1: Execution Strategy</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Target Account</th>
+                    <th style="width: 45%;">Strategic Action</th>
+                    <th style="width: 20%; text-align: right;">Amount ($)</th>
+                </tr>
+            </thead>
+            <tbody id="action-plan-body">
+                <!-- Populated via script -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Strategy Simulation Chart -->
+    <div class="card full-width">
+        <h3>5-Year Net Worth Trajectory</h3>
+        <div class="chart-wrapper">
+            <canvas id="projectionChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Initial State
+    const initialDebts = [
+        { name: "Credit Card", balance: 4500, apr: 24.2, minPay: 140 },
+        { name: "Auto Loan", balance: 14000, apr: 6.2, minPay: 310 },
+        { name: "Student Loan", balance: 22000, apr: 4.8, minPay: 240 }
+    ];
+
+    const initialInvestments = [
+        { name: "401(k) Match Target", balance: 12000, roi: 8.0, monthly: 500 },
+        { name: "Roth IRA", balance: 8500, roi: 8.0, monthly: 583 },
+        { name: "Taxable Brokerage", balance: 15000, roi: 7.5, monthly: 300 }
+    ];
+
+    let chartInstance = null;
+    let debounceTimer = null;
+
+    // Render Initial Tables
+    function initTables() {
+        const debtBody = document.getElementById('debt-table-body');
+        const investBody = document.getElementById('invest-table-body');
+        debtBody.innerHTML = '';
+        investBody.innerHTML = '';
+
+        initialDebts.forEach(d => addDebtRow(d.name, d.balance, d.apr, d.minPay));
+        initialInvestments.forEach(i => addInvestRow(i.name, i.balance, i.roi, i.monthly));
+    }
+
+    function addDebtRow(name = '', balance = 0, apr = 0, minPay = 0) {
+        const tbody = document.getElementById('debt-table-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="debt-name" value="${name}"></td>
+            <td><input type="number" class="debt-balance" value="${balance}" step="100"></td>
+            <td><input type="number" class="debt-apr" value="${apr}" step="0.1"></td>
+            <td><input type="number" class="debt-min" value="${minPay}" step="10"></td>
+            <td><button class="btn-del" onclick="removeRow(this)">&times;</button></td>
+        `;
+        tbody.appendChild(row);
+        triggerRecalculation();
+    }
+
+    function addInvestRow(name = '', balance = 0, roi = 7.0, monthly = 0) {
+        const tbody = document.getElementById('invest-table-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="invest-name" value="${name}"></td>
+            <td><input type="number" class="invest-balance" value="${balance}" step="500"></td>
+            <td><input type="number" class="invest-roi" value="${roi}" step="0.1"></td>
+            <td><input type="number" class="invest-monthly" value="${monthly}" step="25"></td>
+            <td><button class="btn-del" onclick="removeRow(this)">&times;</button></td>
+        `;
+        tbody.appendChild(row);
+        triggerRecalculation();
+    }
+
+    function removeRow(button) {
+        button.closest('tr').remove();
+        triggerRecalculation();
+    }
+
+    // Extract Input Data
+    function extractData() {
+        const debts = [];
+        document.querySelectorAll('#debt-table-body tr').forEach(row => {
+            debts.push({
+                name: row.querySelector('.debt-name').value,
+                balance: parseFloat(row.querySelector('.debt-balance').value) || 0,
+                apr: parseFloat(row.querySelector('.debt-apr').value) || 0,
+                minPay: parseFloat(row.querySelector('.debt-min').value) || 0
+            });
+        });
+
+        const investments = [];
+        document.querySelectorAll('#invest-table-body tr').forEach(row => {
+            investments.push({
+                name: row.querySelector('.invest-name').value,
+                balance: parseFloat(row.querySelector('.invest-balance').value) || 0,
+                roi: parseFloat(row.querySelector('.invest-roi').value) || 0,
+                monthly: parseFloat(row.querySelector('.invest-monthly').value) || 0
+            });
+        });
+
+        return { debts, investments };
+    }
+
+    // 60-Month Projection Engine
+    function runSimulation(allocatedPool, debts, investments) {
+        const months = 60;
+        const labels = [];
+        const optimalNetWorth = [];
+
+        let optDebts = debts.map(d => ({ ...d }));
+        let optInvestTotal = investments.reduce((acc, i) => acc + i.balance, 0);
+        let avgRoi = investments.length > 0 ? (investments.reduce((acc, i) => acc + (i.roi * i.balance), 0) / (optInvestTotal || 1)) / 100 : 0.07;
+
+        for (let m = 0; m <= months; m++) {
+            if (m % 6 === 0) labels.push(`M${m}`);
+
+            let totalDebt = optDebts.reduce((sum, d) => sum + d.balance, 0);
+            let currentNet = optInvestTotal - totalDebt;
+            if (m % 6 === 0) optimalNetWorth.push(Math.round(currentNet));
+
+            let availableCash = allocatedPool;
+
+            optDebts.forEach(d => {
+                if (d.balance > 0) {
+                    let monthlyRate = (d.apr / 100) / 12;
+                    let interest = d.balance * monthlyRate;
+                    let payment = Math.min(d.minPay, d.balance + interest);
+                    d.balance = Math.max(0, d.balance + interest - payment);
+                    availableCash -= payment;
+                }
+            });
+
+            optDebts.sort((a, b) => b.apr - a.apr);
+            for (let d of optDebts) {
+                if (d.balance > 0 && d.apr >= 7.0 && availableCash > 0) {
+                    let extra = Math.min(availableCash, d.balance);
+                    d.balance -= extra;
+                    availableCash -= extra;
+                }
+            }
+
+            if (availableCash > 0) {
+                optInvestTotal += availableCash;
+            }
+            optInvestTotal *= (1 + (avgRoi / 12));
+        }
+
+        return { labels, optimalNetWorth };
+    }
+
+    // Generate Month 1 Action Plan
+    function generateAllocationDirective(allocatedPool, debts, investments) {
+        const planBody = document.getElementById('action-plan-body');
+        planBody.innerHTML = '';
+        
+        let availableCash = allocatedPool;
+        let plan = [];
+
+        // 1. Minimum payments
+        debts.forEach(d => {
+            if (d.balance > 0 && d.minPay > 0) {
+                let monthlyRate = (d.apr / 100) / 12;
+                let interest = d.balance * monthlyRate;
+                let payment = Math.min(d.minPay, d.balance + interest);
+                
+                plan.push({ target: d.name, action: "Baseline Minimum Payment", amount: payment });
+                availableCash -= payment;
+            }
+        });
+
+        // 2. Base investments
+        investments.forEach(i => {
+            if (i.monthly > 0 && availableCash >= i.monthly) {
+                plan.push({ target: i.name, action: "Standard Contribution Target", amount: i.monthly });
+                availableCash -= i.monthly;
+            } else if (i.monthly > 0 && availableCash > 0) {
+                plan.push({ target: i.name, action: "Partial Contribution (Capital Constrained)", amount: availableCash });
+                availableCash = 0;
+            }
+        });
+
+        // 3. Avalanche extra debt payments
+        if (availableCash > 0) {
+            let highInterestDebts = [...debts]
+                .filter(d => d.apr >= 7.0 && d.balance > 0)
+                .sort((a, b) => b.apr - a.apr);
+
+            for (let targetDebt of highInterestDebts) {
+                if (availableCash > 0) {
+                    let remainderToPay = targetDebt.balance - targetDebt.minPay; 
+                    if (remainderToPay > 0) {
+                        let avalanchePayment = Math.min(availableCash, remainderToPay);
+                        plan.push({ target: targetDebt.name, action: "Avalanche Capital Deployment", amount: avalanchePayment });
+                        availableCash -= avalanchePayment;
+                    }
+                }
+            }
+        }
+
+        // 4. Surplus to remaining investments
+        if (availableCash > 0 && investments.length > 0) {
+            let sortedInvestments = [...investments].sort((a, b) => b.roi - a.roi);
+            let optimalAsset = sortedInvestments[0];
+            plan.push({ target: optimalAsset.name, action: "Surplus Capital Injection", amount: availableCash });
+            availableCash = 0;
+        }
+
+        // Output to table
+        plan.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="color: var(--text-primary); font-weight: 500;">${item.target}</td>
+                <td style="color: var(--text-muted);">${item.action}</td>
+                <td style="text-align: right; color: var(--accent-blue); font-weight: 600;">
+                    $${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </td>
+            `;
+            planBody.appendChild(row);
+        });
+    }
+
+    // Zero-Based Dual Slider Logic
+    function recalculate() {
+        const { debts, investments } = extractData();
+        
+        const incomeInput = document.getElementById('income-input');
+        const incomeSlider = document.getElementById('income-slider');
+        const allocationSlider = document.getElementById('allocation-slider');
+        
+        // Synchronize Income Input and Slider based on active interaction
+        if (document.activeElement === incomeInput) {
+            incomeSlider.value = incomeInput.value;
+        } else {
+            incomeInput.value = incomeSlider.value;
+        }
+        
+        let income = parseFloat(incomeSlider.value) || 0;
+        
+        // Calculate absolute minimum required for debt survival
+        const minDebtPayments = debts.reduce((sum, d) => sum + d.minPay, 0);
+
+        // Enforce max and min boundaries on the allocation slider
+        allocationSlider.max = income;
+        allocationSlider.min = minDebtPayments; 
+        
+        let allocation = parseFloat(allocationSlider.value);
+
+        // Prevent boundary breaks
+        if (allocation > income) {
+            allocation = income;
+            allocationSlider.value = allocation;
+        }
+        if (allocation < minDebtPayments) {
+            allocation = minDebtPayments;
+            allocationSlider.value = allocation;
+        }
+
+        // Update Text Displays
+        document.getElementById('income-slider-label').innerText = `$${income.toLocaleString()}`;
+        
+        document.getElementById('allocation-display').innerText = `$${allocation.toLocaleString()} / mo`;
+        document.getElementById('allocation-slider-label').innerText = `$${allocation.toLocaleString()}`;
+
+        // Auto-Routed Calculation (Excess beyond survival payments)
+        const autoRouted = allocation - minDebtPayments;
+        const routedElement = document.getElementById('routed-display');
+        routedElement.innerText = `$${autoRouted.toLocaleString()} / mo`;
+        routedElement.style.color = autoRouted === 0 ? 'var(--text-muted)' : 'var(--accent-green)';
+
+        // Execute engine using the Allocation Pool
+        const { labels, optimalNetWorth } = runSimulation(allocation, debts, investments);
+        renderChart(labels, optimalNetWorth);
+        generateAllocationDirective(allocation, debts, investments);
+    }
+
+    function triggerRecalculation() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(recalculate, 15);
+    }
+
+    function renderChart(labels, netWorthSeries) {
+        if (chartInstance) {
+            chartInstance.data.labels = labels;
+            chartInstance.data.datasets[0].data = netWorthSeries;
+            chartInstance.update();
+            return;
+        }
+
+        const ctx = document.getElementById('projectionChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Net Worth Trajectory',
+                    data: netWorthSeries,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#8b949e', font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#21262d' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    y: {
+                        grid: { color: '#21262d' },
+                        ticks: {
+                            color: '#8b949e',
+                            callback: value => `$${value.toLocaleString()}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Event Listeners for sliders and all inputs
+    document.getElementById('income-slider').addEventListener('input', triggerRecalculation);
+    document.getElementById('allocation-slider').addEventListener('input', triggerRecalculation);
+    
+    document.addEventListener('input', (e) => {
+        if (e.target.matches('input[type="number"], input[type="text"]')) {
+            triggerRecalculation();
+        }
+    });
+
+    window.onload = () => {
+        initTables();
+        recalculate();
+    };
+</script>
+</body>
+</html>
